@@ -1,0 +1,39 @@
+//====================================================================================================================
+// File:        README
+// Case:        VUT, FIT, IPK, project 2
+// Date:        24. 4. 2021
+// Author:      David Mihola
+// Contact:     xmihol00@stud.fit.vutbr.cz
+//====================================================================================================================
+
+FILES:
+main.cpp
+Makefile
+manual.pdf
+packet_generator.py
+README
+sniffer.cpp
+sniffer.h
+
+DESCRIPTION:
+IP version 4, IP version 6 and ARP packet scanning program, supporting TCP, UDP and ICMP transport protocols.
+Build the program with command 'make'.
+
+EXTENSIONS:
+The usage of extensions is documented in the manual.pdf in section 6 Additional Functionality. 
+The additional functionality consist of:
+    - printing the source and destination MAC addresses,
+    - printing the types of layers of the OSI model,
+    - specifying the the IPv4 and IPv6 addresses, on which packets are scanned.
+
+STARTUP EXAMPLES:
+./ipk-sniffer                                    (prints the available interfaces)
+./ipk-sniffer -h                                 (prints the help/usage message)
+./ipk-sniffer --interface                        (prints the available interfaces)
+./ipk-sniffer -i eth0                            (scans one packet on the eth0 interface)
+./ipk-sniffer -i eth0 -u --tcp -n 0              (scans UDP and TCP packets on the eth0 interface, until terminated by the user)
+./ipk-sniffer -i eth0 -p 5588                    (scans one packet on the eth0 interface on port 5588)
+./ipk-sniffer -i eth0 --hostv6 1::2              (scans one packet on the eth0 interface, source or destination IPv6 address must be 1::2)
+./ipk-sniffer -i eth0 --hostv4 123.123.123.123   (scans one packet on the eth0 interface, source or destination IPv4 address must be 123.123.123.123)
+./ipk-sniffer -i eth0 --arp --icmp -n 20         (scans 20 packets on the eth0 interface, which are either ARP or ICMP packets)
+./ipk-sniffer -i eth0 --type --mac               (scans one packet on the eth0 interface and prints it's MAC addresses and types of OSI layer)

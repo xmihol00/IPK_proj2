@@ -1,0 +1,154 @@
+\documentclass[12pt]{article}
+\usepackage{pagecolor,lipsum}
+\usepackage{graphicx}
+\usepackage{authblk}
+\usepackage{array}
+\usepackage{float}
+\usepackage{svg}
+\usepackage{setspace}
+\usepackage{mathtools}
+\usepackage{verbatim}
+\usepackage{indentfirst}
+\usepackage{tabto}
+\usepackage{fancyhdr}
+\usepackage{url}
+\newcommand*{\rom}[1]{\expandafter\@slowromancap\romannumeral #1@}
+\usepackage[left=2cm, top=2cm, text={17cm, 24cm}]{geometry}
+\usepackage[%  
+    colorlinks=true,
+    pdfborder={0 0 0},
+    linkcolor=blue
+]{hyperref}
+\definecolor{comment}{rgb}{0.16, 0.5, 0.1}
+
+\onehalfspacing
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\vspace{6pt}Packet Sniffer}
+\rhead{\vspace{6pt}xmihol00}
+\chead{\thepage}
+\renewcommand{\headrulewidth}{0.5pt}
+
+%%%%%%%%%%%%%%%%%%% TITLE PAGE %%%%%%%%%%%%%
+\title{
+\vspace{2em}
+\includegraphics[scale=0.75]{logo.png}\\
+\Large{Computer Communications and Networks\\Project 2 Documentation}\\
+\vspace{2em}
+\Huge{ZETA: Packet Sniffer}
+\vspace{1em}
+}
+\author{David Mihola (xmihol00)}
+\date{24. 4. 2021}
+\begin{document}
+\pagecolor{white}
+	\maketitle
+	\thispagestyle{empty}
+\newpage
+
+\pagenumbering{arabic}
+\tableofcontents
+\newpage
+\section{Introduction}
+This document describes the logical structure of the Packet Sniffer source code and the approach used to accomplish the assigned task. The more technical details (f.e. signature of implemented functions) are documented directly in the source code.
+
+\section{Libraries}
+The main functionality of the program is implemented with the use of the \texttt{pcap} library~\hyperref[cit1]{[1]}. I chose this library other than the \texttt{libnet} library mainly because of better documentation. Other libraries than the standard \texttt{C} and \texttt{C++} were not used.
+
+\section{File Structure}
+The whole file structure contains seven files. The program itself consist only of three of them, which are:
+\begin{itemize}
+	\item \texttt{main.cpp} -- the main function of the program.
+    \item \texttt{sniffer.h} -- constant values definitions, function declarations, inline function definitions and their documentation.
+    \item \texttt{sniffer.cpp} -- constant values definitions and function definitions.
+\end{itemize}
+
+\section{Functions}
+Implemented functions are divided into non inline and inline.
+The non inline functions implement some necessary functionality and are usually of a larger span. On the other hand the inline functions are short and used as auxiliary functions mainly for converting the byte representation of a packet to some more useful representation (f.e. string format).
+
+\subsection{Non Inline Functions}
+\begin{itemize}
+	\item \texttt{free\_resources()} -- frees allocated resources by the \texttt{pcap\_open\_live()} function.
+	\item \texttt{sig\_int\_handler()} -- handles the program termination by the \texttt{SIGINT (ctrl + c)} signal.
+	\item \texttt{get\_connection()} -- retrieves current live connection established by the \texttt{pcap\_open\_live()} function.
+	\item \texttt{parse\_arguments()} -- parses command line arguments using the \texttt{getopt} library. Creates a packet filter according to the \texttt{pcap-filter} specification from the specified packet types by the command line arguments.
+	\item \texttt{print\_packet()} -- prints packet data in a format specified by the assignment with a use of \texttt{std::cout} manipulation. The \texttt{std::cout} is changed to print integers as two hexadecimal values, each byte of the packet data is then converted to an integer and printed.
+	\item \texttt{packet\_parser()} -- parses received packets. Firstly, the packet arrival time is parsed with a \texttt{parse\_time()} function. Secondly, parses the data link layer, in our case only the ethernet type, with a function \texttt{parse\_ethernet\_header()}. Thirdly, the network layer is parsed with a function \texttt{parse\_network\_layer()}. Parsing of a packet also includes navigating through the IP extension headers, if there are any, which is done by a function \texttt{parse\_extension\_headers()}. Lastly, the destination and source ports are retrieved from the transport layer by a function \texttt{parse\_transport\_layer()}, if possible. And the packet is printed either with the retrieved ports or without them with the use of the \texttt{print\_packet()} function.
+	\item \texttt{create\_pcap\_connection()} -- opens a live pcap connection with a specified packet filter by the command line arguments and checks that the interface uses an ethernet data link layer. Functions \texttt{pcap\_lookupnet()}, \texttt{pcap\_compile()}, \texttt{pcap\_setfilter()}, \texttt{pcap\_freecode()} and \texttt{pcap\_datalink()} are used to achieve that.
+		\item \texttt{parse\_network\_layer()} -- parses the network layer, which in our case includes the IPv4~\hyperref[cit2]{[2]}, IPv6~\hyperref[cit3]{[3]} and ARP~\hyperref[cit4]{[4]} protocols. Text representation of IPv4 and IPv6 addresses is retrieved from the packet with functions \texttt{inet\_ntoa()} and \texttt{inet\_ntop()} respectively and the IPv4 address with \texttt{sprintf()} in case of an ARP packet. The header type of the following header, which can also be an extension header, is retrieved as well.
+		\item \texttt{parse\_transport\_layer()} -- retrieves the destination and source ports in case of TCP~\hyperref[cit5]{[5]} and UDP~\hyperref[cit6]{[6]} headers with a function \texttt{parse\_tcp\_udp()}, otherwise informs that the source and destination ports cannot be obtained. 
+		\item \texttt{print\_all\_interfaces()} -- prints all accessible interfaces on a machine to \texttt{STDOUT} with the use of a \texttt{pcap\_findalldevs()} function.
+\end{itemize}
+
+\subsection{Inline Functions}
+\begin{itemize}
+	\item \texttt{print\_usage\_message()} -- prints a usage message on \texttt{STDOUT} when desired by the \texttt{--help} option or to \texttt{STDERR}, when the program arguments are entered incorrectly.
+	\item \texttt{parse\_mac\_address()} -- parses a MAC address from a byte representation to adequate text representation.
+	\item \texttt{parse\_ethernet\_header()} -- parses the ethernet data link layer~\hyperref[cit7]{[7]} and retrieves the type~\hyperref[cit8]{[8]} of the following network layer and MAC addresses. The source and the destination MAC address is parsed by the function \texttt{parse\_mac\_address()}.
+	\item \texttt{parse\_time()} -- parses the packet receival time to a format satisfactory by the \texttt{RFC3339}~\hyperref[cit9]{[9]} standard.
+	\item \texttt{parse\_tcp\_udp()} -- retrieves the source and the destination port from TCP and UDP headers.
+	\item \texttt{parse\_extension\_headers()} -- parses the IPv6 extension headers~\hyperref[cit10]{[10]}, which are \texttt{Hop-by-Hop Options}, \texttt{Destination Options}, \texttt{Routing Header}, \texttt{Fragment Header}, \texttt{No Next Header} and the extension headers shared between IPv4 and IPv6, which are \texttt{Authentication Header}~\hyperref[cit11]{[11]} and  \texttt{Encapsulation Security Payload Header}~\hyperref[cit12]{[12]}. Retrieves the header type of the following transport layer, if it can be obtained, otherwise \texttt{No Next Header} is used.
+\end{itemize}
+
+\section{Testing}
+The Packet Sniffer was tested with a use of python script \texttt{packet\_generator.py} included in the file structure. It relies on a \texttt{scapy} library~\hyperref[cit13]{[13]}~\hyperref[cit14]{[14]} to generate packets. The constructions in the script build and generate various test packets, which cover majority of packet combinations of the OSI network and transport layers. When the Packet Sniffer as well as Wireshark, which I consider as a reliable reference, are running, the python script is executed. Then the results of such a session are compared.
+
+\section{Additional functionality}
+The additional functionality can be specified by command line arguments, see below. It consists of printing the source and the destination MAC address, printing the types of headers of layers of the OSI model including extension headers. Furthermore specifying the IPv4 and IPv6 addresses, on which packets are scanned. This functionality was added mainly for more convenient testing, but also the user can benefit from more specific information about a certain packet.
+
+\section{Usage}
+Firstly, the program must be compiled with GNU make using command \texttt{make}, binary file \texttt{ipk-sniffer} and others will be generated. Then run the program as:\\
+\texttt{sudo ./ipk-sniffer [options ...]}
+\\
+\\
+Options:\\
+\texttt{-h, --help}\tabto{13.5em} Prints a usage message to \texttt{STDOUT}.\\
+\texttt{-i, --interface <optional string>}\hspace{1.7em} Option can be either followed by a name of an interface on which packets are scanned, or all available interfaces are printed, if the option parameter is not specified or the option is missing entirely.\newline
+\texttt{-p <unsigned short>}\tabto{13.5em} A port number on which the traffic is going to be scanned.\\
+\texttt{-t, --tcp}\tabto{13.5em} Only TCP and other specified packets are going to be scanned.\\
+\texttt{-u, --udp}\tabto{13.5em} Only UDP and other specified packets are going to be scanned.\\
+\texttt{--arp}\tabto{13.5em} Only ARP frame packets are going to be scanned.\\
+\texttt{--icmp}\tabto{13.5em} Only ICMP, ICMPv6 and other specified packets are going to be scanned.\\
+\texttt{-n <int>}\tabto{13.5em} The number of packets to be scanned, 1 if not specified.\\
+\texttt{--mac}\tabto{13.5em} Prints the source and destination MAC addresses of each packet.\\
+\texttt{--type}\tabto{13.5em} Prints the types of headers of layers of the OSI model including extension headers.\\
+\texttt{--hostv4 <IPv4 address>}\tabto{13.5em} Scans only packets with either destination or source IPv4 address specified in the argument.\\
+\texttt{--hostv6 <IPv6 address>}\tabto{13.5em} Scans only packets with either destination or source IPv6 address specified in the argument.
+
+\section{Conclusion}
+This project was quite different from other projects that I have done on this faculty. There are not that many tutorials~\hyperref[cit15]{[15]} or examples regarding this topic, so I had to study the documentation of used libraries a lot more than normally and even look into RFC standards. As a result, I have learnt a lot more than by simply following tutorials and examples.
+\newpage
+
+\section{References}
+\label{cit1} \noindent [1] \tabto{2em} Van Jacobson, Craig Leres and Steven McCanne (2020, Septemper 9) \textit{pcap - Packet Capture library}. \url{https://man7.org/linux/man-pages/man3/pcap.3pcap.html}
+
+\label{cit2} \noindent [2] \tabto{2em} Postel, J. (1981, September) \textit{Internet Protocol} [RFC0791]. \url{https://tools.ietf.org/html/rfc791}
+
+\label{cit3} \noindent [3] \tabto{2em} Deering \& Hinden (1995, December) \textit{Internet Protocol, Version 6 (IPv6) Specification} [RFC1883]. \url{https://tools.ietf.org/html/rfc1883}
+
+\label{cit4} \noindent [4] \tabto{2em} David C. Plummer (1982, November) \textit{An Ethernet Address Resolution Protocol} [RFC0826]. \url{https://tools.ietf.org/html/rfc826}
+
+\label{cit5} \noindent [5] \tabto{2em} Information Sciences Institute, University of Southern California, 4676 Admiralty Way, Marina del Rey, California  90291 (1981, September) \textit{TRANSMISSION CONTROL PROTOCOL} [RFC0793]. \url{https://tools.ietf.org/html/rfc793}
+
+\label{cit6} \noindent [6] \tabto{2em} J. Postel (1980, August 28) \textit{User Datagram Protocol} [RFC0768]. \url{https://tools.ietf.org/html/rfc768}
+
+\label{cit7} \noindent [7] \tabto{2em} The Tcpdump Group (2021, January 29) \textit{LINK-LAYER HEADER TYPES}. \url{https://www.tcpdump.org/linktypes.html}
+
+\label{cit8} \noindent [8] \tabto{2em} Internet Assigned Numbers Authority (2021, February 26) \textit{Protocol Numbers}. \url{https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml}
+
+\label{cit9} \noindent [9] \tabto{2em} Klyne, et. al. (2002, July) \textit{Date and Time on the Internet: Timestamps} [RFC3339]. \url{https://tools.ietf.org/html/rfc3339}
+
+\label{cit10} \noindent [10] \tabto{2em} Cisco Systems, Inc (2006, October) \textit{IPv6 Extension Headers Review and Considerations} [PDF]. \url{https://www.cisco.com/en/US/technologies/tk648/tk872/technologies_white_paper0900aecd8054d37d.pdf}
+
+\label{cit11} \noindent [11] \tabto{2em} Atkinson, R. (1995, August) \textit{IP Authentication Header} [RFC1826]. \url{https://tools.ietf.org/html/rfc1826}
+
+\label{cit12} \noindent [12] \tabto{2em} Atkinson, R. (1995, August) \textit{IP Encapsulating Security Payload (ESP)} [RFC1827]. \url{https://tools.ietf.org/html/rfc1827}
+
+\label{cit13} \noindent [13] \tabto{2em} Philippe Biondi and the Scapy community. (2021, Apr 07) \textit{Welcome to Scapy’s documentation!}. \url{https://scapy.readthedocs.io/en/latest/}
+
+\label{cit14} \noindent [14] \tabto{2em} Eggert, Oliver (2012, January 19) \textit{IPv6 Packet Creation With Scapy
+Documentation} [PDF]. \url{https://www.idsv6.de/Downloads/IPv6PacketCreationWithScapy.pdf}
+
+\label{cit15} \noindent [15] \tabto{2em} thenewboston (2015, December 29) \textit{Python Network Packet Sniffer Tutorials} [Video Series]. YouTube. \url{https://youtube.com/playlist?list=PL6gx4Cwl9DGDdduy0IPDDHYnUx66Vc4ed}
+\end{document}
